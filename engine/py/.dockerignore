@@ -1,0 +1,15 @@
+.git
+.gitignore
+__pycache__
+.pytest_cache
+*.pyc
+*.pyo
+*.pyd
+*.log
+.venv
+test/
+transformers/.git
+transformers/.github
+transformers/docs
+transformers/examples
+transformers/tests

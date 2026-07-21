@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    transformers \
+    torch \
+    accelerate \
+    sentencepiece
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    LLM_WORKER_PORT=5003 \
+    LLM_MODEL_ID=google/gemma-3-1b-it
+
+COPY worker_query_llm.py ./worker_query_llm.py
+
+EXPOSE 5003
+HEALTHCHECK --interval=20s --timeout=5s --retries=5 CMD curl -fsS http://127.0.0.1:5003/health > /dev/null || exit 1
+
+CMD ["python", "worker_query_llm.py"]

@@ -1,0 +1,26 @@
+relay/allowlist.json
+relay/target
+relay/bin/
+relay/relay
+relay/.env
+relay/.hexvision_data/
+node/target
+node/allowlist.json
+node/bin/
+node/.env
+node/cmd/unblink/node_config.hujson
+rust-node/
+rust-relay/
+unblink-engine/
+app-old/
+
+# Environment files
+.env
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+node/unblink

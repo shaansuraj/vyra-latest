@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      build-essential \
+      curl \
+      ffmpeg \
+      git \
+      libgl1 \
+      libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    UV_CACHE_DIR=/tmp/uv-cache
+
+COPY . .
+RUN uv sync --no-dev || uv sync
+
+ENV BACKEND_WS_URL=ws://engine:5000/ws
+CMD ["uv", "run", "python", "-m", "worker_object_detection"]

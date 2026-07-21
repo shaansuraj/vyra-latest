@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cv-worker
+  namespace: vyra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cv-worker
+  template:
+    metadata:
+      labels:
+        app: cv-worker
+    spec:
+      containers:
+        - name: cv-worker
+          image: ghcr.io/your-org/vyra-cv-worker:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "worker_object_detection"]
+          env:
+            - name: WORKER_TYPE
+              value: object_detection
+            - name: WORKER_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vyra-secrets
+                  key: worker-secret
+            - name: RELAY_HTTP_BASE
+              value: http://relay:8020
+            - name: OBJECT_DET_ENABLE_VLM
+              value: "0"
+            - name: OBJECT_DET_ENABLE_FACE_RECOGNITION
+              value: "0"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "6Gi"
+

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSS Test</title>
+  <link rel="stylesheet" href="/marketing-v3.css">
+</head>
+<body style="margin:0; background:#030507; color: #f0f4ff;">
+  <div id="test-results" style="padding:20px; font-family: monospace;"></div>
+
+  <header class="v3-header">
+    <span class="v3-brand-text">VYRA</span>
+    <nav class="v3-nav">
+      <a class="v3-nav-link" href="#">Home</a>
+      <a class="v3-nav-link" href="#">About</a>
+    </nav>
+    <div class="v3-header-actions">
+      <button class="v3-btn v3-btn-primary">Book Demo</button>
+    </div>
+  </header>
+
+  <div style="padding-top: 100px;">
+    <section class="v3-hero">
+      <div class="v3-hero-inner">
+        <div class="v3-hero-copy">
+          <h1 class="v3-hero-title">Test Title</h1>
+          <p class="v3-hero-lead">Test lead text.</p>
+        </div>
+        <div class="v3-hero-visual" style="background:rgba(94,224,255,0.1);">
+          Visual area
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Check computed styles
+    window.addEventListener('load', () => {
+      const results = [];
+      const header = document.querySelector('.v3-header');
+      if (header) {
+        const cs = getComputedStyle(header);
+        results.push('v3-header display: ' + cs.display);
+        results.push('v3-header position: ' + cs.position);
+        results.push('v3-header gap: ' + cs.gap);
+        results.push('v3-header height: ' + cs.height);
+        results.push('v3-header padding: ' + cs.padding);
+      }
+      const heroInner = document.querySelector('.v3-hero-inner');
+      if (heroInner) {
+        const cs = getComputedStyle(heroInner);
+        results.push('v3-hero-inner display: ' + cs.display);
+        results.push('v3-hero-inner grid-template-columns: ' + cs.gridTemplateColumns);
+      }
+      const navLink = document.querySelector('.v3-nav-link');
+      if (navLink) {
+        const cs = getComputedStyle(navLink);
+        results.push('v3-nav-link padding: ' + cs.padding);
+      }
+
+      // Check stylesheet count and rules
+      results.push('Stylesheets: ' + document.styleSheets.length);
+      for (const ss of document.styleSheets) {
+        try {
+          results.push('  Sheet: ' + (ss.href || 'inline') + ' rules: ' + ss.cssRules.length);
+        } catch(e) {
+          results.push('  Sheet: ' + (ss.href || 'inline') + ' ERROR: ' + e.message);
+        }
+      }
+
+      document.getElementById('test-results').innerHTML = results.join('<br>');
+    });
+  </script>
+</body>
+</html>

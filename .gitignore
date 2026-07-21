@@ -1,0 +1,98 @@
+# Environment and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Local runtime data
+application/database/
+application/storage/
+application/relay/.hexvision_data/
+application/node/cmd/unblink/node_config.hujson
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Dependencies and package-manager caches
+node_modules/
+**/node_modules/
+.venv/
+venv/
+env/
+ENV/
+**/.venv/
+**/venv/
+.uv-cache/
+**/.uv-cache/
+.npm/
+.pnpm-store/
+.yarn/
+
+# Build outputs
+dist/
+build/
+out/
+coverage/
+htmlcov/
+target/
+bin/
+tmp/
+temp/
+*.tgz
+
+# Python cache and tooling
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+*.egg-info/
+
+# Go build/test artifacts
+*.test
+coverage.out
+
+# Logs and diagnostics
+logs/
+**/logs/
+*.log
+*.lcov
+report.*.json
+
+# Downloaded model weights and generated inference artifacts
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.engine
+*.weights
+*.ckpt
+
+# Local IDE/agent/tooling state
+.idea/
+.vscode/
+.claude/
+.codex/
+.agents/
+.tools/
+commands.txt
+*.swp
+*.swo
+*~
+
+# Nested Git metadata from vendored/editable dependencies
+**/.git/
+engine/py/transformers/.github/
+
+# OS files
+.DS_Store
+Thumbs.db

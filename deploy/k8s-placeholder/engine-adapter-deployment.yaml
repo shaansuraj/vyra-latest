@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: engine-adapter
+  namespace: vyra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: engine-adapter
+  template:
+    metadata:
+      labels:
+        app: engine-adapter
+    spec:
+      containers:
+        - name: engine-adapter
+          image: ghcr.io/your-org/vyra-engine:latest
+          imagePullPolicy: IfNotPresent
+          command: ["bun", "run", "adapter"]
+          env:
+            - name: RELAY_WS_URL
+              value: ws://relay:7001/worker/connect
+            - name: RELAY_HTTP_BASE
+              value: http://relay:7001
+            - name: ENGINE_WORKER_TYPE
+              value: object_detection
+            - name: WORKER_ID
+              value: vyra/person_detection
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+

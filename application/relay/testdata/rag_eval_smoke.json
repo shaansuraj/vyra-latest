@@ -1,0 +1,42 @@
+[
+  {
+    "id": "docs-helmet-policy",
+    "category": "docs",
+    "question": "What does the helmet policy require?",
+    "date": "2026-02-21",
+    "expected_source_ids": ["memory://ppe-policy"],
+    "expected_event_ids": [],
+    "reference_answer": "Helmet policy requires hard hats in the loading bay.",
+    "must_say_unknown": false
+  },
+  {
+    "id": "event-helmet-violation",
+    "category": "event",
+    "question": "Was there a helmet violation on main camera?",
+    "date": "2026-02-21",
+    "expected_source_ids": [],
+    "expected_event_ids": ["event-helmet-1"],
+    "reference_answer": "A helmet violation was recorded on Main.",
+    "must_say_unknown": false
+  },
+  {
+    "id": "hybrid-helmet-policy-event",
+    "category": "hybrid",
+    "question": "Compare the Main helmet violation with the helmet policy.",
+    "date": "2026-02-21",
+    "expected_source_ids": ["memory://ppe-policy"],
+    "expected_event_ids": ["event-helmet-1"],
+    "reference_answer": "The event conflicts with the helmet policy.",
+    "must_say_unknown": false
+  },
+  {
+    "id": "unknown-forklift-maintenance",
+    "category": "unknown",
+    "question": "What is the forklift maintenance schedule?",
+    "date": "2026-02-21",
+    "expected_source_ids": [],
+    "expected_event_ids": [],
+    "reference_answer": "",
+    "must_say_unknown": true
+  }
+]

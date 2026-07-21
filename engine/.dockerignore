@@ -1,0 +1,13 @@
+node_modules
+.pytest_cache
+__pycache__
+.git
+.gitignore
+.vscode
+*.log
+.DS_Store
+py/.venv
+py/__pycache__
+py/.pytest_cache
+py/transformers
+py/test

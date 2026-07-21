@@ -1,0 +1,251 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/unblink/unblink/relay"
+)
+
+func shutdownSignals() []os.Signal {
+	return []os.Signal{
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	}
+}
+
+func main() {
+	// Load .env file if it exists (optional, won't error if missing)
+	if err := godotenv.Load(); err != nil {
+		log.Printf("[Main] No .env file found or error loading it (this is optional): %v", err)
+	} else {
+		log.Println("[Main] Loaded .env file")
+	}
+
+	// Load config to get ports from environment
+	config, err := relay.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Parse subcommands
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "database":
+			handleDatabaseCommand()
+			return
+		case "-h", "--help", "help":
+			printUsage()
+			return
+		}
+	}
+
+	// Run relay server
+	relayAddr := ":" + config.RelayPort // WebSocket server for node connections (port 9020)
+	apiAddr := ":" + config.APIPort     // HTTP API for browser clients (port 8020)
+
+	launcherTag := os.Getenv("VYRA_LAUNCHER_TAG")
+	guard, err := acquireRelayInstanceGuard(config.AppDir, os.Args, launcherTag)
+	if err != nil {
+		log.Fatalf("[Main] %v", err)
+	}
+	defer func() {
+		if err := guard.Release(); err != nil {
+			log.Printf("[Main] Failed to release relay lock: %v", err)
+		}
+	}()
+
+	r := relay.NewRelay()
+
+	// Ensure dev user exists (for dev impersonation mode)
+	authStore := relay.NewAuthStore(r.GetDB().DB)
+	devUser, err := authStore.EnsureDevUser()
+	if err != nil {
+		log.Printf("[Main] Warning: Failed to ensure dev user: %v", err)
+	} else {
+		log.Printf("[Main] Dev user 'dev@local' is ready")
+	}
+
+	// Create mock node for dev mode (for testing UI with impersonation)
+	if config.DevImpersonate != "" {
+		nodeTable := relay.NewNodeTable(r.GetDB().DB)
+		mockNode, devToken, err := nodeTable.EnsureDevMockNode(devUser.ID)
+		if err != nil {
+			log.Printf("[Main] Warning: Failed to ensure mock node: %v", err)
+		} else {
+			log.Printf("[Main] Mock node '%s' ready", mockNode.ID)
+
+			// Write dev config file for the node
+			devConfigPath, err := writeDevNodeConfig(devToken)
+			if err != nil {
+				log.Printf("[Main] Warning: Failed to write dev node config: %v", err)
+			} else {
+				log.Printf("[Main] Wrote dev node config: %s", devConfigPath)
+			}
+		}
+	}
+
+	// Start HTTP API server
+	apiServer, err := relay.StartHTTPAPIServer(r, apiAddr, config)
+	if err != nil {
+		log.Printf("Failed to start HTTP API: %v", err)
+		return
+	}
+
+	// Start WebSocket server
+	wsServer, err := relay.StartWebSocketServerAsync(r, relayAddr)
+	if err != nil {
+		log.Printf("Failed to start WebSocket server: %v", err)
+		return
+	}
+
+	// Handle shutdown signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, shutdownSignals()...)
+
+	sig := <-sigChan
+	log.Printf("[Main] Received %s, shutting down...", sig)
+
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Shutdown HTTP API server
+	if err := apiServer.Shutdown(ctx); err != nil {
+		log.Printf("[Main] HTTP API shutdown error: %v", err)
+	}
+
+	// Shutdown WebSocket server
+	if err := wsServer.Shutdown(ctx); err != nil {
+		log.Printf("[Main] WebSocket server shutdown error: %v", err)
+	}
+
+	// Shutdown relay (close node connections)
+	r.Shutdown()
+
+	log.Println("[Main] Shutdown complete")
+}
+
+func handleDatabaseCommand() {
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: relay database <command>")
+		fmt.Println("Commands:")
+		fmt.Println("  delete  Delete the database directory")
+		os.Exit(1)
+	}
+
+	switch os.Args[2] {
+	case "delete":
+		deleteDatabase()
+	default:
+		fmt.Printf("Unknown database command: %s\n", os.Args[2])
+		fmt.Println("Available commands: delete")
+		os.Exit(1)
+	}
+}
+
+func deleteDatabase() {
+	// Load config to get database path
+	config, err := relay.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Delete the entire database directory (containing relay.db and -wal files)
+	dbDir := config.AppDir + "/database"
+
+	// Check if directory exists
+	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
+		log.Printf("Database directory does not exist: %s", dbDir)
+		return
+	}
+
+	// Confirm deletion
+	fmt.Printf("Are you sure you want to delete the database directory at %s? (yes/no): ", dbDir)
+	var response string
+	fmt.Scanln(&response)
+
+	if response != "yes" {
+		fmt.Println("Deletion cancelled")
+		return
+	}
+
+	// Delete the entire directory
+	if err := os.RemoveAll(dbDir); err != nil {
+		log.Fatalf("Failed to delete database directory: %v", err)
+	}
+
+	log.Printf("Database directory deleted: %s", dbDir)
+}
+
+func writeDevNodeConfig(token string) (string, error) {
+	// Use a fixed path in /tmp so the node can find it
+	devConfigPath := "/tmp/unblink-dev-config.hujson"
+
+	// Dev node config template
+	configContent := `{
+  // Relay server WebSocket URL
+  "relay_address": "ws://localhost:9020/node/connect",
+
+  // Node ID (matches the mock node created by relay in dev mode)
+  "node_id": "mock-dev-1",
+
+  // Dev token (auto-generated by relay)
+  "token": "` + token + `",
+
+  // Auto-reconnect configuration
+  "reconnect": {
+    "enabled": true,
+    "max_num_attempts": 10
+  },
+
+  // Mock services for development testing
+  "services": [
+    {
+      "id": "mock-cam-1",
+      "name": "Dev Camera 1",
+      "type": "rtsp",
+      "addr": "127.0.0.1",
+      "port": 8001,
+      "path": "/stream"
+    },
+    {
+      "id": "mock-cam-2",
+      "name": "Dev Camera 2",
+      "type": "rtsp",
+      "addr": "127.0.0.1",
+      "port": 8002,
+      "path": "/stream"
+    },
+    {
+      "id": "mock-cam-3",
+      "name": "Dev Camera 3",
+      "type": "mjpeg",
+      "addr": "127.0.0.1",
+      "port": 8003,
+      "path": "/stream"
+    }
+  ]
+}
+`
+	if err := os.WriteFile(devConfigPath, []byte(configContent), 0644); err != nil {
+		return "", fmt.Errorf("write config: %w", err)
+	}
+
+	return devConfigPath, nil
+}
+
+func printUsage() {
+	fmt.Println("Usage: relay [command]")
+	fmt.Println()
+	fmt.Println("Commands:")
+	fmt.Println("  database delete  Delete the database file")
+	fmt.Println("  help, -h         Show this help message")
+}

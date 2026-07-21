@@ -1,0 +1,237 @@
+name: vyra
+
+x-adapter-common: &adapter-common
+  image: vyra/engine:local
+  command: ["bun", "run", "adapter"]
+  restart: "no"
+  depends_on:
+    relay:
+      condition: service_healthy
+    engine:
+      condition: service_healthy
+  environment: &adapter-common-env
+    RELAY_WS_URL: ws://relay:9020/worker/connect
+    RELAY_HTTP_BASE: http://relay:9020
+    ENGINE_WS_URL: ws://engine:5000/ws
+    MAX_JOB_RETRIES: "1"
+
+x-worker-common: &worker-common
+  build:
+    context: ./engine/py
+    dockerfile: Dockerfile.worker
+  image: vyra/cv-worker:local
+  restart: "no"
+  depends_on:
+    relay:
+      condition: service_healthy
+    engine:
+      condition: service_healthy
+  environment: &worker-common-env
+    BACKEND_WS_URL: ws://engine:5000/ws
+    RELAY_HTTP_BASE: http://relay:8020
+    WORKER_SECRET: ${WORKER_SECRET:-change-me}
+    PYTHONUNBUFFERED: "1"
+
+services:
+  relay:
+    profiles: ["core"]
+    build:
+      context: ./application/relay
+      dockerfile: Dockerfile
+      additional_contexts:
+        node_module: ./application/node
+    image: vyra/relay:local
+    # Manual lifecycle by default. Use docker-compose.resilient.yml when you
+    # explicitly want automatic restart ownership.
+    restart: "no"
+    environment:
+      APP_DIR: /var/lib/vyra/relay
+      FRAME_INTERVAL_SECONDS: ${FRAME_INTERVAL_SECONDS:-0.2}
+      CV_FRAME_BATCH_SIZE: ${CV_FRAME_BATCH_SIZE:-10}
+      RELAY_PORT: "9020"
+      API_PORT: "8020"
+      ENGINE_PORT: "5000"
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:5173}
+      AUTO_REQUEST_REALTIME_STREAM: ${AUTO_REQUEST_REALTIME_STREAM:-true}
+      SNAPSHOT_RETENTION_DAYS: ${SNAPSHOT_RETENTION_DAYS:-7}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      SIGNUP_ENABLED: ${SIGNUP_ENABLED:-false}
+      WORKER_SECRET: ${WORKER_SECRET:-change-me}
+      LLM_WORKER_URL: ${LLM_WORKER_URL:-http://llm-worker:5003}
+    volumes:
+      - relay_data:/var/lib/vyra/relay
+    ports:
+      - "8020:8020"
+      - "9020:9020"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8020/flags"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  app:
+    profiles: ["core"]
+    build:
+      context: ./application/app
+      dockerfile: Dockerfile
+      args:
+        VITE_RELAY_API_URL: ${VITE_RELAY_API_URL:-http://localhost:8020}
+    image: vyra/app:local
+    restart: unless-stopped
+    depends_on:
+      relay:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+  engine:
+    profiles: ["core"]
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    image: vyra/engine:local
+    restart: "no"
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5000/version"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  adapter-ppe:
+    <<: *adapter-common
+    profiles: ["cv"]
+    environment:
+      <<: *adapter-common-env
+      WORKER_ID: vyra/ppe_detection
+      ENGINE_WORKER_TYPE: ppe_detection
+      MIN_SUBMIT_INTERVAL_MS: "0"
+      MAX_IN_FLIGHT: "4"
+      MAX_QUEUE_SIZE: "64"
+      IN_FLIGHT_TIMEOUT_MS: "60000"
+
+  adapter-objdet:
+    <<: *adapter-common
+    profiles: ["cv"]
+    environment:
+      <<: *adapter-common-env
+      WORKER_ID: vyra/person_detection
+      ENGINE_WORKER_TYPE: object_detection
+      MIN_SUBMIT_INTERVAL_MS: "0"
+      MAX_IN_FLIGHT: "4"
+      MAX_QUEUE_SIZE: "64"
+      IN_FLIGHT_TIMEOUT_MS: "60000"
+
+  adapter-vlm:
+    <<: *adapter-common
+    profiles: ["cv"]
+    environment:
+      <<: *adapter-common-env
+      WORKER_ID: vyra/vlm
+      ENGINE_WORKER_TYPE: vlm
+      MIN_SUBMIT_INTERVAL_MS: "200"
+      MAX_IN_FLIGHT: "4"
+      MAX_QUEUE_SIZE: "48"
+      IN_FLIGHT_TIMEOUT_MS: "60000"
+
+  adapter-face:
+    <<: *adapter-common
+    profiles: ["cv"]
+    environment:
+      <<: *adapter-common-env
+      WORKER_ID: vyra/face_recognition
+      ENGINE_WORKER_TYPE: face_recognition
+      MIN_SUBMIT_INTERVAL_MS: "0"
+      MAX_IN_FLIGHT: "4"
+      MAX_QUEUE_SIZE: "32"
+      IN_FLIGHT_TIMEOUT_MS: "15000"
+
+  worker-ppe:
+    <<: *worker-common
+    profiles: ["cv", "gpu"]
+    command: ["uv", "run", "python", "-m", "worker_ppe"]
+    environment:
+      <<: *worker-common-env
+      WORKER_TYPE: ppe_detection
+      MAX_LATENCY_MS: "100"
+      MAX_BATCH_SIZE: "64"
+      PPE_ENABLE_VLM: "0"
+      PPE_ENABLE_FACE_RECOGNITION: "0"
+
+  worker-objdet:
+    <<: *worker-common
+    profiles: ["cv", "gpu"]
+    command: ["uv", "run", "python", "-m", "worker_object_detection"]
+    environment:
+      <<: *worker-common-env
+      WORKER_TYPE: object_detection
+      MAX_LATENCY_MS: "300"
+      MAX_BATCH_SIZE: "64"
+      OBJECT_DET_ENABLE_VLM: "0"
+      OBJECT_DET_ENABLE_FACE_RECOGNITION: "0"
+
+  worker-vlm:
+    <<: *worker-common
+    profiles: ["cv", "gpu"]
+    command: ["uv", "run", "python", "-m", "worker_vlm"]
+    environment:
+      <<: *worker-common-env
+      WORKER_TYPE: vlm
+      MAX_LATENCY_MS: "5000"
+      MAX_BATCH_SIZE: "32"
+
+  worker-face:
+    <<: *worker-common
+    profiles: ["cv", "gpu"]
+    command: ["uv", "run", "python", "-m", "worker_face_recognition"]
+    environment:
+      <<: *worker-common-env
+      WORKER_TYPE: face_recognition
+      MAX_LATENCY_MS: "300"
+      MAX_BATCH_SIZE: "32"
+
+  worker-fast-embedding:
+    <<: *worker-common
+    profiles: ["llm", "gpu"]
+    command: ["uv", "run", "python", "-m", "worker_embedding"]
+    environment:
+      <<: *worker-common-env
+      WORKER_TYPE: fast_embedding
+      MAX_LATENCY_MS: "250"
+      MAX_BATCH_SIZE: "32"
+      RAG_TEXT_EMBEDDING_MODEL: ${RAG_TEXT_EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5}
+
+  worker-rag-reranker:
+    <<: *worker-common
+    profiles: ["llm", "gpu"]
+    command: ["uv", "run", "python", "-m", "worker_rag_reranker"]
+    environment:
+      <<: *worker-common-env
+      WORKER_TYPE: rag_reranker
+      MAX_LATENCY_MS: "250"
+      MAX_BATCH_SIZE: "8"
+      RAG_RERANKER_MODEL: ${RAG_RERANKER_MODEL:-cross-encoder/ms-marco-MiniLM-L-6-v2}
+
+  llm-worker:
+    profiles: ["llm", "gpu"]
+    build:
+      context: ./engine/py
+      dockerfile: Dockerfile.llm
+    image: vyra/llm-worker:local
+    restart: unless-stopped
+    environment:
+      LLM_MODEL_ID: ${LLM_MODEL_ID:-google/gemma-3-1b-it}
+      LLM_WORKER_PORT: "5003"
+      MAX_ANSWER_TOKENS: ${MAX_ANSWER_TOKENS:-220}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
+    ports:
+      - "5003:5003"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5003/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  relay_data:

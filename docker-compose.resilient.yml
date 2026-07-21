@@ -1,0 +1,27 @@
+name: vyra
+
+# Explicit restart-policy override for environments that want auto-restart
+# ownership. Use with:
+#   docker compose -f docker-compose.yml -f docker-compose.resilient.yml up -d
+
+services:
+  relay:
+    restart: unless-stopped
+  engine:
+    restart: unless-stopped
+  adapter-ppe:
+    restart: unless-stopped
+  adapter-objdet:
+    restart: unless-stopped
+  adapter-vlm:
+    restart: unless-stopped
+  adapter-face:
+    restart: unless-stopped
+  worker-ppe:
+    restart: unless-stopped
+  worker-objdet:
+    restart: unless-stopped
+  worker-vlm:
+    restart: unless-stopped
+  worker-face:
+    restart: unless-stopped

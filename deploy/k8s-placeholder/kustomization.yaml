@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: vyra
+resources:
+  - namespace.yaml
+  - relay-deployment.yaml
+  - app-deployment.yaml
+  - engine-adapter-deployment.yaml
+  - cv-worker-deployment.yaml
+  - llm-worker-deployment.yaml
+

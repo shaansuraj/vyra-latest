@@ -1,0 +1,17 @@
+# Cloudflare Tunnel config template for VYRA.
+# Copy this to ~/.cloudflared/config.yml and replace placeholders.
+#
+# App is exposed at:
+#   https://vyra.example.com
+#
+# Non-Docker mode:
+# - Run relay on localhost:8020
+# - Run app (vite dev server) on localhost:3000
+# - Vite proxies relay API/websocket paths to localhost:8020
+tunnel: <TUNNEL_UUID>
+credentials-file: /home/<USER>/.cloudflared/<TUNNEL_UUID>.json
+
+ingress:
+  - hostname: vyra.example.com
+    service: http://localhost:3000
+  - service: http_status:404

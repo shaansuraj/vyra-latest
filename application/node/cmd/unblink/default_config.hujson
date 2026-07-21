@@ -1,0 +1,26 @@
+{
+  // Relay server WebSocket URL
+  // Development
+  // "relay_address": "ws://localhost:9020/node/connect",
+  // Production
+  "relay_address": "ws://localhost:9020/node/connect",
+
+  // Authorization token (added after authorization)
+  "token": "",
+
+  // Auto-reconnect configuration
+  "reconnect": {
+    "max_num_attempts": 20
+  },
+
+  // Services to expose through this node
+  "services": [
+    {
+      "name": "Open RTSP",
+      "type": "rtsp",
+      "addr": "rtsp://716f898c7b71.entrypoint.cloud.wowza.com:1935/app-8F9K44lJ/304679fe_stream2",
+      "port": 554,
+      "path": "/stream1"
+    },
+  ]
+}

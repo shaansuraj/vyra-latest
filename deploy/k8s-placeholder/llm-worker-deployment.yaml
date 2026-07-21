@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-worker
+  namespace: vyra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-worker
+  template:
+    metadata:
+      labels:
+        app: llm-worker
+    spec:
+      containers:
+        - name: llm-worker
+          image: ghcr.io/your-org/vyra-llm-worker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LLM_WORKER_PORT
+              value: "5003"
+            - name: LLM_MODEL_ID
+              value: google/gemma-3-1b-it
+          ports:
+            - containerPort: 5003
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "4"
+              memory: "10Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-worker
+  namespace: vyra
+spec:
+  selector:
+    app: llm-worker
+  ports:
+    - name: http
+      port: 5003
+      targetPort: http
+

@@ -1,0 +1,72 @@
+:root {
+  --app-bg: #05080f;
+  --app-bg-soft: #0a1020;
+  --canvas-bg: rgba(10, 16, 31, 0.78);
+  --panel-bg: rgba(12, 18, 34, 0.9);
+  --panel-bg-strong: rgba(8, 12, 24, 0.95);
+  --line-soft: rgba(118, 147, 191, 0.22);
+  --line-strong: rgba(118, 147, 191, 0.42);
+
+  --neon-blue: #3ea6ff;
+  --neon-cyan: #5df5ff;
+  --neon-violet: #7f8cff;
+  --ok-green: #49e3a1;
+  --warn-amber: #ffd166;
+  --danger-red: #ff6f8f;
+
+  --text-0: #f3f7ff;
+  --text-1: #d7e2f5;
+  --text-2: #95abc9;
+  --text-3: #607493;
+
+  --shadow-canvas: 0 24px 80px rgba(1, 5, 15, 0.58);
+  --shadow-float: 0 16px 40px rgba(0, 4, 12, 0.46);
+  --shadow-interaction: 0 12px 24px rgba(3, 8, 20, 0.62);
+
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-physical: cubic-bezier(0.16, 1, 0.3, 1.08);
+
+  --dur-fast: 160ms;
+  --dur-feedback: 260ms;
+  --dur-enter: 520ms;
+}
+
+@theme {
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+
+  /* Keep compatibility with existing utility class names */
+  --color-violet-50:  #eef4ff;
+  --color-violet-100: #dbe7ff;
+  --color-violet-200: #bfd4ff;
+  --color-violet-300: #9eb8ff;
+  --color-violet-400: #7f9fff;
+  --color-violet-500: #5b85ff;
+  --color-violet-600: #3f6df2;
+  --color-violet-700: #3158ca;
+  --color-violet-800: #2a499f;
+  --color-violet-900: #213979;
+  --color-violet-950: #16224d;
+
+  --color-neu-50:  #f6f9ff;
+  --color-neu-100: #e4edfd;
+  --color-neu-150: #d3def1;
+  --color-neu-200: #b3c1d9;
+  --color-neu-250: #a2b1ca;
+  --color-neu-300: #8d9db8;
+  --color-neu-350: #7d8da8;
+  --color-neu-400: #6b7f9b;
+  --color-neu-450: #5e728e;
+  --color-neu-500: #50627b;
+  --color-neu-550: #43546b;
+  --color-neu-600: #36475c;
+  --color-neu-650: #2c3a4e;
+  --color-neu-700: #243043;
+  --color-neu-750: #1d2839;
+  --color-neu-800: #161f30;
+  --color-neu-850: #111a2a;
+  --color-neu-900: #0c1320;
+  --color-neu-925: #090f1a;
+  --color-neu-950: #050912;
+}
